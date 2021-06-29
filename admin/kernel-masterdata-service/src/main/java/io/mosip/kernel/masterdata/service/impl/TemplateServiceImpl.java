@@ -5,13 +5,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,6 +20,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import io.mosip.kernel.core.dataaccess.exception.DataAccessLayerException;
@@ -118,9 +120,11 @@ public class TemplateServiceImpl implements TemplateService {
 
 	@Autowired
 	private PublisherClient<String, EventModel, HttpHeaders> publisher;
+	
 
-	@PostConstruct
-	private void init() {
+	@Scheduled(fixedDelayString = "${masterdata.websub.resubscription.delay.millis}",
+			initialDelayString = "${masterdata.subscriptions-delay-on-startup}")
+	public void subscribeTopics() {
 		try {
 			publisher.registerTopic(topic, hubURL);
 		} catch (WebSubClientException exception) {
@@ -133,6 +137,7 @@ public class TemplateServiceImpl implements TemplateService {
 	 * 
 	 * @see io.mosip.kernel.masterdata.service.TemplateService#getAllTemplate()
 	 */
+	@Cacheable(value = "templates", key = "template")
 	@Override
 	public TemplateResponseDto getAllTemplate() {
 		try {
@@ -158,6 +163,7 @@ public class TemplateServiceImpl implements TemplateService {
 	 * @see io.mosip.kernel.masterdata.service.TemplateService#
 	 * getAllTemplateByLanguageCode(java.lang.String)
 	 */
+	@Cacheable(value = "templates", key = "'template'.concat('-').concat(#languageCode)")
 	@Override
 	public TemplateResponseDto getAllTemplateByLanguageCode(String languageCode) {
 		try {
@@ -184,6 +190,7 @@ public class TemplateServiceImpl implements TemplateService {
 	 * getAllTemplateByLanguageCodeAndTemplateTypeCode(java.lang.String,
 	 * java.lang.String)
 	 */
+	@Cacheable(value = "templates", key = "'template'.concat('-').concat(#languageCode).concat('-').concat(#templateTypeCode)")
 	@Override
 	public TemplateResponseDto getAllTemplateByLanguageCodeAndTemplateTypeCode(String languageCode,
 			String templateTypeCode) {
@@ -213,6 +220,7 @@ public class TemplateServiceImpl implements TemplateService {
 	 * io.mosip.kernel.masterdata.service.TemplateService#createTemplate(io.mosip.
 	 * kernel.masterdata.dto.TemplateDto)
 	 */
+	@CacheEvict(value = "templates", allEntries = true)
 	@Override
 	public IdAndLanguageCodeID createTemplate(TemplateDto template) {
 
@@ -225,7 +233,6 @@ public class TemplateServiceImpl implements TemplateService {
 			template = masterdataCreationUtil.createMasterData(Template.class, template);
 			Template entity = MetaDataUtils.setCreateMetaData(template, Template.class);
 			templateEntity = templateRepository.create(entity);
-
 		} catch (DataAccessLayerException | DataAccessException | IllegalArgumentException | IllegalAccessException
 				| NoSuchFieldException | SecurityException e) {
 			auditUtil.auditRequest(String.format(MasterDataConstant.CREATE_ERROR_AUDIT, Template.class.getSimpleName()),
@@ -263,6 +270,7 @@ public class TemplateServiceImpl implements TemplateService {
 	 * io.mosip.kernel.masterdata.service.TemplateService#updateTemplates(io.mosip.
 	 * kernel.masterdata.dto.TemplateDto)
 	 */
+	@CacheEvict(value = "templates", allEntries = true)
 	@Override
 	public IdAndLanguageCodeID updateTemplates(TemplatePutDto template) {
 		IdAndLanguageCodeID idAndLanguageCodeID = new IdAndLanguageCodeID();
@@ -319,6 +327,7 @@ public class TemplateServiceImpl implements TemplateService {
 	 * io.mosip.kernel.masterdata.service.TemplateService#deleteTemplates(java.lang.
 	 * String)
 	 */
+	@CacheEvict(value = "templates", allEntries = true)
 	@Transactional
 	@Override
 	public IdResponseDto deleteTemplates(String id) {
@@ -329,7 +338,6 @@ public class TemplateServiceImpl implements TemplateService {
 				throw new RequestException(TemplateErrorCode.TEMPLATE_NOT_FOUND.getErrorCode(),
 						TemplateErrorCode.TEMPLATE_NOT_FOUND.getErrorMessage());
 			}
-
 		} catch (DataAccessLayerException | DataAccessException e) {
 			throw new MasterDataServiceException(TemplateErrorCode.TEMPLATE_DELETE_EXCEPTION.getErrorCode(),
 					TemplateErrorCode.TEMPLATE_DELETE_EXCEPTION.getErrorMessage() + ExceptionUtils.parseException(e));
@@ -345,6 +353,7 @@ public class TemplateServiceImpl implements TemplateService {
 	 * @see io.mosip.kernel.masterdata.service.TemplateService#
 	 * getAllTemplateByTemplateTypeCode(java.lang.String)
 	 */
+	@Cacheable(value = "templates", key = "'templateByTemplateCode'.concat('-').concat(#templateTypeCode.toString)")
 	@Override
 	public TemplateResponseDto getAllTemplateByTemplateTypeCode(String templateTypeCode) {
 		List<Template> templates;
@@ -454,6 +463,7 @@ public class TemplateServiceImpl implements TemplateService {
 		return filterResponseDto;
 	}
 
+	@CacheEvict(value = "templates", allEntries = true)
 	@Override
 	public StatusResponseDto updateTemplates(String id, boolean isActive) {
 		// TODO Auto-generated method stub

@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -138,6 +140,7 @@ public class LocationServiceImpl implements LocationService {
 	 * @see io.mosip.kernel.masterdata.service.LocationService#getLocationDetails(
 	 * java. lang.String)
 	 */
+	@Cacheable(value = "locations", key = "'location'.concat('-').concat(#langCode)")
 	@Override
 	public LocationHierarchyResponseDto getLocationDetails(String langCode) {
 		List<LocationHierarchyDto> responseList = null;
@@ -176,6 +179,8 @@ public class LocationServiceImpl implements LocationService {
 	 * @see io.mosip.kernel.masterdata.service.LocationService#
 	 * getLocationHierarchyByLangCode(java.lang.String, java.lang.String)
 	 */
+
+	@Cacheable(value = "locations", key = "'location'.concat('-').concat(#locCode).concat('-').concat(#langCode)")
 	@Override
 	public LocationResponseDto getLocationHierarchyByLangCode(String locCode, String langCode) {
 		List<Location> childList = null;
@@ -214,6 +219,7 @@ public class LocationServiceImpl implements LocationService {
 		return locationHierarchyResponseDto;
 	}
 
+	@CacheEvict(value = "locations", allEntries = true)
 	@Override
 	@Transactional
 	public LocationPostResponseDto createLocation(LocationCreateDto dto) {
@@ -300,6 +306,7 @@ public class LocationServiceImpl implements LocationService {
 	 * io.mosip.kernel.masterdata.service.LocationService#updateLocationDetails( io.
 	 * mosip.kernel.masterdata.dto.RequestDto)
 	 */
+	@CacheEvict(value = "locations", allEntries = true)
 	@Override
 	@Transactional
 	public LocationPutResponseDto updateLocationDetails(LocationPutDto locationDto) {
@@ -374,6 +381,7 @@ public class LocationServiceImpl implements LocationService {
 		return postLocationCodeResponseDto;
 	}
 
+	@CacheEvict(value = "locations", allEntries = true)
 	@Override
 	@Transactional
 	public StatusResponseDto updateLocationStatus(String code, boolean isActive) {
@@ -413,6 +421,7 @@ public class LocationServiceImpl implements LocationService {
 	 * io.mosip.kernel.masterdata.service.LocationService#deleteLocationDetials(
 	 * java .lang.String)
 	 */
+	@CacheEvict(value = "locations", allEntries = true)
 	@Override
 	@Transactional
 	public CodeResponseDto deleteLocationDetials(String locationCode) {
@@ -448,6 +457,7 @@ public class LocationServiceImpl implements LocationService {
 	 * @see io.mosip.kernel.masterdata.service.LocationService#
 	 * getLocationDataByHierarchyName(java.lang.String)
 	 */
+	@Cacheable(value = "locations", key = "'location'.concat('-').concat(#hierarchyName)")
 	@Override
 	public LocationResponseDto getLocationDataByHierarchyName(String hierarchyName) {
 		List<Location> locationlist = null;
@@ -479,6 +489,7 @@ public class LocationServiceImpl implements LocationService {
 	 * @see io.mosip.kernel.masterdata.service.LocationService#
 	 * getImmediateChildrenByLocCodeAndLangCode(java.lang.String, java.lang.String)
 	 */
+	@Cacheable(value = "locations", key = "'location'.concat('-').concat(#locCode).concat('-').concat(#langCode)")
 	@Override
 	public LocationResponseDto getImmediateChildrenByLocCodeAndLangCode(String locCode, String langCode) {
 		List<Location> locationlist = null;
@@ -596,6 +607,8 @@ public class LocationServiceImpl implements LocationService {
 	 * @see io.mosip.kernel.masterdata.service.LocationService#validateLocationName(
 	 * java. lang.String)
 	 */
+
+	@Cacheable(value = "locations", key = "'location'.concat('-').concat(#locationName)")
 	@Override
 	public StatusResponseDto validateLocationName(String locationName) {
 		StatusResponseDto statusResponseDto = null;
@@ -1140,6 +1153,7 @@ public class LocationServiceImpl implements LocationService {
 		return locationLevelResponseDto;
 	}
 
+	@Cacheable(value = "locations", key = "'location'.concat('-').concat(#locationCode).concat('-').concat(#langCode)")
 	@Override
 	public LocationExtnDto getLocationDetailsByLangCode(String locationCode, String langCode) {
 		LocationExtnDto location = null;
